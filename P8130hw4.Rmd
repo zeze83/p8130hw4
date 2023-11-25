@@ -45,7 +45,7 @@ The test statistics is 112.5. Since the p-value is 0.1447, which is greater than
 ### (a)
 
 ```{r}
-data2 = read_excel("Desktop/2023/23F BIST P8130/hw/hw4/Brain.xlsx") |>
+data2 = read_excel("Brain.xlsx") |>
   janitor::clean_names() 
 data2_nohomo = data2 |>
   filter(species != "Homo sapiens")
@@ -92,7 +92,7 @@ The main outcome is total cost (in dollars) of patients diagnosed with
 heart disease. The main predictor is number of emergency room (ER) visits. And other important covariates are age, gender, number of complications that arose during treatment, and duration of treatment condition.
 
 ```{r}
-data3 = read_csv("Desktop/2023/23F BIST P8130/hw/hw4/HeartDisease.csv") |>
+data3 = read_csv("HeartDisease.csv") |>
   janitor::clean_names() |>
   mutate(
     gender = as.factor(gender),
