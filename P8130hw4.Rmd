@@ -1,0 +1,208 @@
+---
+title: "P8130hw4"
+author: "Ze Li"
+date: "2023-11-25"
+output: pdf_document
+---
+
+```{r include=FALSE}
+library(readxl)
+library(tidyverse)
+```
+
+
+## Problem 1 
+
+### (a)
+
+H0: The median blood sugar readings was equal to 120 in the population from which the 25 patients were selected
+
+Ha:The median blood sugar readings was less than 120 in the population from which the 25 patients were selected.
+
+```{r}
+data1 = c(125,123, 117, 123, 115, 112, 128, 118, 124, 111, 116, 109, 125, 120, 113, 123, 112, 118, 121, 118, 122, 115,105 ,118, 131)
+data1
+medianvalue = 120
+diff = data1-medianvalue
+num_neg = sum(diff<0)
+result1.1 <- binom.test(num_neg, length(diff), p = 0.5, alternative = "less")
+result1.1
+```
+
+The test statistics 0.56. Since the p-value is 0.7878, which is greater than 0.05, so we fail to reject the null hypothesis, indicating we have no evidence that the median blood sugar levels are less than 120.
+
+### (b)
+
+```{r}
+result1.2 <- wilcox.test(data1, mu = medianvalue, alternative = "less")
+result1.2
+```
+
+The test statistics is 112.5. Since the p-value is 0.1447, which is greater than 0.05, so we fail to reject the null hypothesis, indicating we have no evidence that the median blood sugar levels are less than 120.
+
+## Problem 2
+
+### (a)
+
+```{r}
+data2 = read_excel("Desktop/2023/23F BIST P8130/hw/hw4/Brain.xlsx") |>
+  janitor::clean_names() 
+data2_nohomo = data2 |>
+  filter(species != "Homo sapiens")
+model=lm(glia_neuron_ratio ~ ln_brain_mass,data2_nohomo)
+summary(model)
+```
+
+### (b)
+
+```{r}
+predicted = model$coefficients[1]+7.22*model$coefficients[2]
+predicted
+```
+
+### (c)
+
+The interval for the prediction of a single new observation is more relevant for your prediction of human glia-neuron ratio than an interval for the predicted mean glia-neuron ratio at the given brain mass.
+
+### (d)
+
+```{r}
+# Method1
+prediction_interval = predict(model, newdata = data.frame(ln_brain_mass= 7.22), interval = "prediction", level = 0.95)
+prediction_interval
+# Method2
+tcrit = qt(df=15,0.975)
+se=sqrt(0.1699)
+lowerbound = predicted - tcrit*se
+upperbound = predicted + tcrit*se
+c(lowerbound,upperbound)
+```
+
+The 95% prediction interval for human glia-neuron ratio is (1.04, 1.91). So we can conclude that human brain doesn't have an excessive glia-neuron ratio for its mass compared with other primates.
+
+### (e)
+
+Considering the position of the human data point relative to those data used to generate the regression line, we can see that the point falls beyond the range of the variable used to fit the line, so we are not certain that the regression line could be used to predict the glia_neuron ratio of humans.
+
+## Problem 3
+
+### (a)
+
+The main outcome is total cost (in dollars) of patients diagnosed with
+heart disease. The main predictor is number of emergency room (ER) visits. And other important covariates are age, gender, number of complications that arose during treatment, and duration of treatment condition.
+
+```{r}
+data3 = read_csv("Desktop/2023/23F BIST P8130/hw/hw4/HeartDisease.csv") |>
+  janitor::clean_names() |>
+  mutate(
+    gender = as.factor(gender),
+    gender = recode(gender, "0" = "female","1" = "male")
+  )
+summary(data3)
+```
+
+### (b)
+
+```{r}
+plot(data3$totalcost)
+plot(log(data3$totalcost))
+```
+
+It seems that after log transformation, the plot is approximately to normality since the points are randomly distributed.
+
+```{r}
+hist(data3$totalcost)
+hist(log(data3$totalcost))
+```
+
+We can also see from the histogram plot that log transformation helps improve normality.
+
+### (c)
+
+```{r}
+heart_data = 
+  data3 |> 
+  mutate(
+    comp_bin = 
+      case_when(
+        complications == 0 ~ "0",
+        TRUE ~ "1"
+      )) |>
+  filter(totalcost > 0) |> 
+  mutate(ln_cost = log(totalcost))
+```
+
+### (d)
+
+```{r}
+heart_data |> 
+  ggplot()+
+  geom_point(aes(x = e_rvisits, y = ln_cost))+
+  theme_bw()+
+  labs(x = "Number of Emergency Room Visits",
+       y = "ln(Total Cost)")
+
+model3 = lm(ln_cost~e_rvisits,heart_data)
+summary(model3)
+
+t_crit = qt(p=.05/2, df=783, lower.tail=FALSE)
+t_crit
+```
+
+The slope is 0.22672, at a 5% significance level, t > t_783,0.975, we reject the null and conclude that there is a significant linear association between the number of Emergency room visits and ln(Total cost). 
+
+It means that holding all other variable constant, as the risk of ERvisits goes up by 1 percent point, the predicted ln(Total cost) will increase by approximately 0.22672 dollars.
+
+### (e)
+
+**(i) Test if comp_bin is an effect modifier of the relationship between totalcost and ERvisits. Comment.**
+
+```{r}
+fit_inter = lm(totalcost ~ e_rvisits*comp_bin, data = heart_data)
+summary(fit_inter)
+```
+
+The comp_bin is not an effect modifier of the relationship between totalcost and ERvisit, since the p-value for the coefficient of e_rvisits*comp_bin is not significant.
+
+**(ii) Test if comp_bin is a confounder of the relationship between totalcost and ERvisits. Comment.**
+
+```{r}
+fit1 = lm(ln_cost ~ e_rvisits, data = heart_data)
+fit2 = lm(ln_cost ~ e_rvisits + comp_bin, data = heart_data)
+fit1$coefficients
+fit2$coefficients
+```
+
+The coefficients of e_rvisits in the regression model with or without comp_bin did not show much difference, showing that comp_bin might not be considered a confounder of the relationship between totalcost and ERvisits.
+
+**(iii) Decide if comp_bin should be included along with ERvisits. Why or why not?**
+
+```{r}
+fit2 |>
+  anova()
+```
+
+From the ANOVA test, the comp_bin should be included with ERvisits as the p-value for the coefficient of comp_bin is less than 0.05 in this model.
+
+### (f)
+
+**(i) Fit a MLR, show the regression results and comment.**
+
+```{r}
+fit_mlr = 
+  lm(ln_cost ~ e_rvisits + comp_bin + age + gender + duration, data = heart_data) 
+fit_mlr |> 
+  summary()
+fit_mlr |>
+  anova()
+```
+
+The fitted model is ln(totalcost) = 6.0449619  + 0.1757486 ERvisits + 1.4921110comp_bin + 0.0055406duration. As the covariates age and gender didn't make any significant difference to the model under a 5% confidence level, they should not be included along with other variables.
+
+**(ii) Compare the SLR and MLR models. Which model would you use to address the investigator’s objective and why?**
+
+```{r}
+anova(fit2,fit_mlr)
+```
+
+Since the p-value of anova test is less than 0.05, we reject the null hypotheses and conclude that the larger model is superior. As a result, we will choose MLR models.
