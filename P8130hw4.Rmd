@@ -8,6 +8,7 @@ output: pdf_document
 ```{r include=FALSE}
 library(readxl)
 library(tidyverse)
+library(BSDA)
 ```
 
 
@@ -20,22 +21,22 @@ H0: The median blood sugar readings was equal to 120 in the population from whic
 Ha:The median blood sugar readings was less than 120 in the population from which the 25 patients were selected.
 
 ```{r}
-data1 = c(125,123, 117, 123, 115, 112, 128, 118, 124, 111, 116, 109, 125, 120, 113, 123, 112, 118, 121, 118, 122, 115,105 ,118, 131)
+data1 = c(125,123, 117, 123, 115, 112, 128, 118, 124, 111, 
+          116, 109, 125, 120, 113, 123, 112, 118, 121, 118, 
+          122, 115,105 ,118, 131)
 data1
 medianvalue = 120
-diff = data1-medianvalue
-num_neg = sum(diff<0)
-result1.1 <- binom.test(num_neg, length(diff), p = 0.5, alternative = "less")
-result1.1
+sign_result1 = SIGN.test(data1, md=medianvalue, alternative = "less",conf.level = 0.95,exact = FALSE)
+sign_result1
 ```
 
-The test statistics 0.56. Since the p-value is 0.7878, which is greater than 0.05, so we fail to reject the null hypothesis, indicating we have no evidence that the median blood sugar levels are less than 120.
+The sample estimates median of x is 118 . Since the p-value is 0.2706, which is greater than 0.05, so we fail to reject the null hypothesis, indicating we have no evidence that the median blood sugar levels are less than 120.
 
 ### (b)
 
 ```{r}
-result1.2 <- wilcox.test(data1, mu = medianvalue, alternative = "less")
-result1.2
+wilcox_result <- wilcox.test(data1, mu = medianvalue, alternative = "less")
+wilcox_result
 ```
 
 The test statistics is 112.5. Since the p-value is 0.1447, which is greater than 0.05, so we fail to reject the null hypothesis, indicating we have no evidence that the median blood sugar levels are less than 120.
@@ -67,15 +68,8 @@ The interval for the prediction of a single new observation is more relevant for
 ### (d)
 
 ```{r}
-# Method1
 prediction_interval = predict(model, newdata = data.frame(ln_brain_mass= 7.22), interval = "prediction", level = 0.95)
 prediction_interval
-# Method2
-tcrit = qt(df=15,0.975)
-se=sqrt(0.1699)
-lowerbound = predicted - tcrit*se
-upperbound = predicted + tcrit*se
-c(lowerbound,upperbound)
 ```
 
 The 95% prediction interval for human glia-neuron ratio is (1.04, 1.91). So we can conclude that human brain doesn't have an excessive glia-neuron ratio for its mass compared with other primates.
@@ -158,7 +152,7 @@ It means that holding all other variable constant, as the risk of ERvisits goes 
 **(i) Test if comp_bin is an effect modifier of the relationship between totalcost and ERvisits. Comment.**
 
 ```{r}
-fit_inter = lm(totalcost ~ e_rvisits*comp_bin, data = heart_data)
+fit_inter = lm(ln_cost ~ e_rvisits*comp_bin, data = heart_data)
 summary(fit_inter)
 ```
 
